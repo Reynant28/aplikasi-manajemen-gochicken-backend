@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Auth\Events\Authenticated;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class UsersModel extends Authenticatable
+{
+    use HasFactory, Notifiable;
+    protected $table = 'users';
+    protected $primaryKey = 'id_user';
+    public $incrementing = false;
+    protected $fillable = [
+        'id_user',
+        'nama',
+        'username',
+        'password',
+        'role',
+        'id_cabang',
+    ];
+
+    protected $hidden = [
+        'password',
+    ];
+
+    public function cabang()
+    {
+        return $this->belongsTo('App\Models\CabangModel', 'id_cabang');
+    }
+}
