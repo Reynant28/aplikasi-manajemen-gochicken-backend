@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CabangController;
 use App\Http\Controllers\ManageAdminCabangController;
+use App\Http\Controllers\ProdukController;
 
 // Public routes for authentication
 Route::post('/super-admin/login', [AuthController::class, 'loginSuperAdmin']);
@@ -21,7 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Routes that can only be accessed by Super Admin
-    Route::middleware('role:super_admin')->group(function () {
+    Route::middleware('role:super admin')->group(function () {
         // Cabang Management API
         Route::get('/cabang', [CabangController::class, 'index']);
         Route::post('/cabang', [CabangController::class, 'store']);
@@ -31,5 +32,11 @@ Route::middleware('auth:sanctum')->group(function () {
         // Admin Cabang Management API
         Route::get('/cabang-without-admin', [ManageAdminCabangController::class, 'getCabangWithoutAdmin']);
         Route::post('/create-admin-cabang', [ManageAdminCabangController::class, 'createAdminCabang']);
+
+        // Produk Management API
+        Route::get('/produk', [ProdukController::class, 'index']);
+        Route::post('/produk', [ProdukController::class, 'store']);
+        Route::put('/produk/{id_produk}', [ProdukController::class, 'update']);
+        Route::delete('/produk/{id_produk}', [ProdukController::class, 'destroy']);
     });
 });

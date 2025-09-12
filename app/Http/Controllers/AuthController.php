@@ -13,22 +13,22 @@ class AuthController extends Controller
     public function loginSuperAdmin(Request $request)
     {
         $request->validate([
-            'username' => 'required',
+            'email' => 'required',
             'password' => 'required',
         ]);
 
-        $user = UsersModel::where('username', $request->username)->first();
+        $user = UsersModel::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'username' => ['Username atau password salah.'],
+                'email' => ['email atau password salah.'],
             ]);
         }
 
-        // Pastikan role-nya adalah 'super_admin'
-        if ($user->role !== 'super_admin') {
+        // Pastikan role-nya adalah 'super admin'
+        if ($user->role !== 'super admin') {
              throw ValidationException::withMessages([
-                'username' => ['Username atau password salah.'],
+                'email' => ['email atau password salah.'],
             ]);
         }
 
