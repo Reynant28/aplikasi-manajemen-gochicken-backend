@@ -44,7 +44,7 @@ class AuthController extends Controller
     public function loginAdminCabang(Request $request)
     {
         $request->validate([
-            'id_cabang' => 'required|exists:cabang,id_cabang',
+            'id_cabang' => 'required',
             'password_cabang' => 'required',
             'password_pribadi' => 'required',
         ]);

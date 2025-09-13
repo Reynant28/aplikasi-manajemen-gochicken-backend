@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CabangController;
+use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\ManageAdminCabangController;
 use App\Http\Controllers\ProdukController;
 
@@ -38,5 +39,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/produk', [ProdukController::class, 'store']);
         Route::put('/produk/{id_produk}', [ProdukController::class, 'update']);
         Route::delete('/produk/{id_produk}', [ProdukController::class, 'destroy']);
+
+        // Karyawan Management API
+        Route::get('/karyawan', [KaryawanController::class, 'index']);
+        Route::post('/karyawan', [KaryawanController::class, 'store']);
+        Route::put('/karyawan/{id_karyawan}', [KaryawanController::class, 'update']);
+        Route::delete('/karyawan/{id_karyawan}', [KaryawanController::class, 'destroy']);
     });
 });

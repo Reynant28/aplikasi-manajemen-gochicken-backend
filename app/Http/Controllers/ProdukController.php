@@ -27,12 +27,12 @@ class ProdukController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'id_produk' => 'required|string|unique:produk,id_produk',
-            'nama_produk' => 'required|string|max:255',
-            'deskripsi' => 'required|string|max:255',
-            'harga' => 'required|numeric',
-            'id_stock_cabang' => 'required|integer',
-            'gambar_produk' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'id_produk' => 'required',
+            'nama_produk' => 'required',
+            'deskripsi' => 'required',
+            'harga' => 'required',
+            'id_stock_cabang' => 'required',
+            'gambar_produk' => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -51,6 +51,12 @@ class ProdukController extends Controller
             'id_stock_cabang' => $request->id_stock_cabang,
             'gambar_produk' => $request->gambar_produk,
         ]);
+
+
+        if ($request->hasFile('gambar_produk')) {
+            $produk->gambar_produk = $request->file('gambar_produk')->store('produk_images', 'public');
+            $produk->save();
+        }
 
         return response()->json([
             'status' => 'success',
@@ -74,11 +80,11 @@ class ProdukController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'nama_produk' => 'sometimes|required|string|max:255',
-            'deskripsi' => 'sometimes|required|string|max:255',
-            'harga' => 'sometimes|required|numeric',
-            'id_stock_cabang' => 'sometimes|required|integer',
-            'gambar_produk' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'nama_produk' => 'required',
+            'deskripsi' => 'required',
+            'harga' => 'required',
+            'id_stock_cabang' => 'required',
+            'gambar_produk' => 'nullable',
         ]);
 
         if ($validator->fails()) {

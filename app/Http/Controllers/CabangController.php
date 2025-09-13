@@ -28,11 +28,11 @@ class CabangController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'id_cabang' => 'required|string|unique:cabang,id_cabang',
-            'nama_cabang' => 'required|string|max:255',
-            'alamat' => 'required|string|max:255',
-            'telepon' => 'required|string|max:20',
-            'password_cabang' => 'required|string|min:8',
+            'id_cabang' => 'required',
+            'nama_cabang' => 'required',
+            'alamat' => 'required',
+            'telepon' => 'required',
+            'password_cabang' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -73,10 +73,10 @@ class CabangController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'nama_cabang' => 'sometimes|required|string|max:255',
-            'alamat' => 'sometimes|required|string|max:255',
-            'telepon' => 'sometimes|required|string|max:20',
-            'password_cabang' => 'nullable|string|min:8',
+            'nama_cabang' => 'required',
+            'alamat' => 'required',
+            'telepon' => 'required',
+            'password_cabang' => 'nullable',
         ]);
 
         if ($validator->fails()) {

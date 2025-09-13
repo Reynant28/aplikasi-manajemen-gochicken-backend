@@ -34,11 +34,11 @@ class ManageAdminCabangController extends Controller
     {
         // 1. Validasi data yang masuk
         $validator = Validator::make($request->all(), [
-            'id_user' => 'required|string|unique:users,id_user',
-            'nama' => 'required|string|max:255',
-            'username' => 'required|string|unique:users,username|max:255',
-            'password' => 'required|string|min:8',
-            'id_cabang' => 'required|exists:cabang,id_cabang',
+            'id_user' => 'required',
+            'nama' => 'required',
+            'email' => 'required',
+            'password' => 'required',
+            'id_cabang' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -52,7 +52,7 @@ class ManageAdminCabangController extends Controller
         // 2. Pastikan cabang yang dipilih belum memiliki admin cabang
         $cabang = CabangModel::with('user')->find($request->id_cabang);
 
-        if ($cabang->user->contains('role', 'admin_cabang')) {
+        if ($cabang->user->contains('role', 'admin cabang')) {
             throw ValidationException::withMessages([
                 'id_cabang' => ['Cabang ini sudah memiliki admin cabang.'],
             ]);
@@ -62,9 +62,9 @@ class ManageAdminCabangController extends Controller
         $user = UsersModel::create([
             'id_user' => $request->id_user,
             'nama' => $request->nama,
-            'username' => $request->username,
+            'email' => $request->email,
             'password' => Hash::make($request->password), // Hashing password
-            'role' => 'admin_cabang',
+            'role' => 'admin cabang',
             'id_cabang' => $request->id_cabang,
         ]);
 
