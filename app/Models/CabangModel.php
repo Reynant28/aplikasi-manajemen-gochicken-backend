@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CabangModel extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
     protected $table = 'cabang';
     protected $primaryKey = 'id_cabang';
     public $incrementing = false;

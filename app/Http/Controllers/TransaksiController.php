@@ -16,7 +16,7 @@ class TransaksiController extends Controller
      */
     public function index()
     {
-        $transaksi = TransaksiModel::with('detail.produk', 'cabang')->get();
+        $transaksi = TransaksiModel::with('details.produk', 'cabang')->get();
 
         return response()->json([
             'status' => 'success',

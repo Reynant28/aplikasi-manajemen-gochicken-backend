@@ -2,19 +2,20 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class KaryawanModel extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $table = 'karyawan';
     protected $primaryKey = 'id_karyawan';
-    
+
     // This is the fix. 'id_karyawan' is an auto-incrementing key.
     public $incrementing = true;
-    
+
     protected $fillable = [
         // 'id_karyawan' should not be fillable as it's auto-incremented
         'id_cabang',

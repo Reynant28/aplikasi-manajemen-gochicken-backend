@@ -134,6 +134,16 @@ class ReportController extends Controller
         $topProducts = DB::table('detail_transaksi')
             ->join('transaksi', 'detail_transaksi.id_transaksi', '=', 'transaksi.id_transaksi')
             ->join('produk', 'detail_transaksi.id_produk', '=', 'produk.id_produk')
+            ->when($filter === 'minggu', function ($q) {
+                $q->whereBetween('transaksi.tanggal_waktu', [now()->startOfWeek(Carbon::SUNDAY), now()->endOfWeek(Carbon::SATURDAY)]);
+            })
+            ->when($filter === 'bulan', function ($q) {
+                $q->whereMonth('transaksi.tanggal_waktu', now()->month)
+                ->whereYear('transaksi.tanggal_waktu', now()->year);
+            })
+            ->when($filter === 'tahun', function ($q) {
+                $q->whereYear('transaksi.tanggal_waktu', now()->year);
+            })
             ->select('produk.nama_produk', DB::raw('SUM(detail_transaksi.jumlah_produk) as total_terjual'))
             ->groupBy('produk.nama_produk')
             ->orderByDesc('total_terjual')

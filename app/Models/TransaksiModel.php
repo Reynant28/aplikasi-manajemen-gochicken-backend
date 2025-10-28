@@ -37,7 +37,7 @@ class TransaksiModel extends Model
     }
 
     // Relasi ke Detail Transaksi (kalau ada tabel detail transaksi)
-    public function detail()
+    public function details()
     {
         return $this->hasMany(DetailTransaksiModel::class, 'id_transaksi');
     }

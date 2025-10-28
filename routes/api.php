@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BahanBakuController;
 use App\Http\Controllers\BahanBakuPakaiController;
 use App\Http\Controllers\CabangController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JenisPengeluaranController;
 use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\ManageAdminCabangController;
+use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\PengeluaranController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ReportController;
@@ -24,6 +26,9 @@ Route::get('/cabang', [CabangController::class, 'index']);
 
 // Routes protected by Sanctum middleware
 Route::middleware('auth:sanctum')->group(function () {
+    //backup database
+    Route::middleware('auth:sanctum')->get('/backup', [BackupController::class, 'backup']);
+
     // Current authenticated user
     Route::get('/user', fn(Request $request) => $request->user());
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -32,6 +37,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'globalStats']);
     Route::get('/dashboard/chart', [DashboardController::class, 'globalChart']);
     Route::get('/dashboard/activities', [DashboardController::class, 'globalActivities']);
+
+     // ✨ NEW: Enhanced Dashboard Features
+    Route::get('/dashboard/month-comparison', [DashboardController::class, 'monthComparison']);
+    Route::get('/dashboard/declining-products', [DashboardController::class, 'decliningProducts']);
+    Route::get('/dashboard/low-stock', [DashboardController::class, 'lowStockAlert']);
 
     // --- DASHBOARD & REPORTS (FOR ADMIN CABANG) ---
     Route::get('/dashboard/cabang/{id}', [DashboardController::class, 'cabangStats']);
@@ -80,6 +90,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/pengeluaran/{id_pengeluaran}', [PengeluaranController::class, 'update']);
     Route::delete('/pengeluaran/{id_pengeluaran}', [PengeluaranController::class, 'destroy']);
 
+    // Pemesanan
+    Route::get('/cabang/{id_cabang}/pemesanan', [PemesananController::class, 'index']);
+    Route::post('/pemesanan', [PemesananController::class, 'store']);
+    Route::put('/pemesanan/{id_transaksi}', [PemesananController::class, 'update']);
+    Route::delete('/pemesanan/{id_transaksi}', [PemesananController::class, 'destroy']);
 
     // --- SHARED RESOURCES (Needed by Admin Cabang for forms) ---
     Route::get('/jenis-pengeluaran', [JenisPengeluaranController::class, 'index']);
@@ -114,5 +129,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create-admin-cabang', [ManageAdminCabangController::class, 'createAdminCabang']);
         Route::put('/admin-cabang/{id_user}', [ManageAdminCabangController::class, 'updateAdminCabang']);
         Route::delete('/admin-cabang/{id_user}', [ManageAdminCabangController::class, 'deleteAdminCabang']);
+
+       Route::middleware(['auth'])->group(function () {
+            Route::get('/backup/export', [BackupController::class, 'exportDatabase']);
+            Route::get('/backup/mysqldump', [BackupController::class, 'exportDatabaseWithMysqldump']);
+        });
     });
 });
