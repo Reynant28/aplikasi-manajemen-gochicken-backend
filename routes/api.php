@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -22,6 +23,7 @@ use SebastianBergmann\CodeCoverage\Report\Xml\Report;
 // Public routes for authentication
 Route::post('/super-admin/login', [AuthController::class, 'loginSuperAdmin']);
 Route::post('/admin-cabang/login', [AuthController::class, 'loginAdminCabang']);
+Route::post('/kasir/login', [AuthController::class, 'loginKasir']);
 Route::get('/cabang', [CabangController::class, 'index']);
 
 // Routes protected by Sanctum middleware
@@ -64,7 +66,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/bahan-baku-pakai/{id_pemakaian}', [BahanBakuPakaiController::class, 'update']);
     Route::delete('/bahan-baku-pakai/{id_pemakaian}', [BahanBakuPakaiController::class, 'destroy']);
 
-
     // ==== Get data for Reports as Super Admin (ALL CABANG) ====
     Route::get('/reports/all', [ReportController::class, 'allCabangReport']);
     Route::get('/reports/products', [ReportController::class, 'productReportSuperAdmin']);
@@ -83,6 +84,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/karyawan', [KaryawanController::class, 'store']);
     Route::put('/karyawan/{id_karyawan}', [KaryawanController::class, 'update']);
     Route::delete('/karyawan/{id_karyawan}', [KaryawanController::class, 'destroy']);
+
+    //transaksi
+    Route::get('/cabang/{id_cabang}/transaksi', [TransaksiController::class, 'getTransaksiByCabang']);
 
     // Pengeluaran
     Route::get('/cabang/{id_cabang}/pengeluaran', [PengeluaranController::class, 'getPengeluaranByCabang']);
@@ -130,9 +134,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin-cabang/{id_user}', [ManageAdminCabangController::class, 'updateAdminCabang']);
         Route::delete('/admin-cabang/{id_user}', [ManageAdminCabangController::class, 'deleteAdminCabang']);
 
-       Route::middleware(['auth'])->group(function () {
+        Route::middleware(['auth'])->group(function () {
             Route::get('/backup/export', [BackupController::class, 'exportDatabase']);
             Route::get('/backup/mysqldump', [BackupController::class, 'exportDatabaseWithMysqldump']);
         });
+        // Audit Log Routes
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+        Route::get('/audit-logs/filters', [AuditLogController::class, 'getFilters']);
     });
 });

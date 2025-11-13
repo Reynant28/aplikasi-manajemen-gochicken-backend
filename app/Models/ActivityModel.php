@@ -24,12 +24,19 @@ class ActivityModel extends Model
 
     protected $casts = [
         'old_data' => 'array',
-        'new_data' => 'array'
+        'new_data' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
     public function user()
     {
         return $this->belongsTo(UsersModel::class);
+    }
+
+    public function cabang()
+    {
+        return $this->belongsTo(CabangModel::class, 'id_cabang');
     }
 
     public function model()

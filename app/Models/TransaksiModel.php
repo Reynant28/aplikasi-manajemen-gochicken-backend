@@ -11,7 +11,7 @@ class TransaksiModel extends Model
 
     protected $table = 'transaksi';
     protected $primaryKey = 'id_transaksi';
-    public $incrementing = false;
+    public $incrementing = true;
 
     protected $fillable = [
         'id_transaksi',

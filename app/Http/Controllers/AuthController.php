@@ -77,4 +77,32 @@ class AuthController extends Controller
         ]);
     }
 
+    public function loginKasir(Request $request)
+    {
+        $request->validate([
+            'id_cabang' => 'required',
+            'password_cabang' => 'required',
+        ]);
+
+        $cabang = CabangModel::where('id_cabang', $request->id_cabang)->first();
+
+        if (!$cabang || !Hash::check($request->password_cabang, $cabang->password_cabang)) {
+            throw ValidationException::withMessages([
+                'password_cabang' => ['Password cabang salah.'],
+            ]);
+        }
+
+        $user = UsersModel::where('id_cabang', $request->id_cabang)
+                            ->where('role', 'kasir')
+                            ->first();
+
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'status' => 'success',
+            'token' => $token,
+            'user' => $user,
+            'cabang' => $cabang, // tambahan data cabang lengkap
+        ]);
+    }
 }
