@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Storage;
 use App\Models\ProdukModel;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
 use App\Models\StokCabangModel;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class ProdukController extends Controller
 {
@@ -198,19 +199,19 @@ class ProdukController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
-        
+
         try {
             $stok = StokCabangModel::findOrFail($id_stock_cabang);
 
             // Use a transaction to ensure data integrity
             DB::transaction(function () use ($stok, $request) {
                 $newStok = $stok->jumlah_stok + $request->jumlah;
-                
+
                 // Prevent stock from going below zero
                 if ($newStok < 0) {
                     throw new \Exception("Stok tidak boleh kurang dari nol.");
                 }
-                
+
                 $stok->jumlah_stok = $newStok;
                 $stok->save();
             });
@@ -231,6 +232,55 @@ class ProdukController extends Controller
                 'status' => 'error',
                 'message' => $e->getMessage()
             ], 400); // Bad request (e.g., trying to make stock negative)
+        }
+    }
+
+    //for android
+    public function getProdukByCabangForAndroid($id_cabang)
+    {
+        try {
+            Log::info("Android API: Fetching products for cabang ID: {$id_cabang}");
+
+            $produkStok = ProdukModel::select(
+                'produk.id_produk',
+                'produk.nama_produk',
+                'produk.kategori',
+                'produk.harga',
+                'produk.gambar_produk',
+                'stok_cabang.jumlah_stok',
+                'stok_cabang.id_stock_cabang'
+            )
+            ->join('stok_cabang', 'produk.id_produk', '=', 'stok_cabang.id_produk')
+            ->where('stok_cabang.id_cabang', $id_cabang)
+            ->orderBy('produk.nama_produk', 'asc')
+            ->get();
+
+            // Append the full URL for the image
+            $produkStok->each(function ($item) {
+                if ($item->gambar_produk) {
+                    $item->gambar_url = url(Storage::url($item->gambar_produk));
+                } else {
+                    $item->gambar_url = null;
+                }
+            });
+
+            Log::info("Android API: Successfully fetched " . $produkStok->count() . " products for cabang ID: {$id_cabang}");
+
+            return response()->json([
+                'status' => true, // Use boolean true instead of string 'success'
+                'message' => 'Data produk berhasil diambil',
+                'data' => $produkStok,
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error("Android API Error for cabang {$id_cabang}: " . $e->getMessage());
+
+            return response()->json([
+                'status' => false, // Use boolean false instead of string 'error'
+                'message' => 'Gagal mengambil data produk cabang.',
+                'error' => $e->getMessage(),
+                'data' => []
+            ], 500);
         }
     }
 }

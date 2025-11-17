@@ -36,96 +36,74 @@ class TransaksiController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'kode_transaksi' => 'required|string',
             'id_cabang' => 'required|exists:cabang,id_cabang',
             'nama_pelanggan' => 'required|string|max:255',
             'metode_pembayaran' => 'required|string',
-            'status_transaksi' => 'required|in:OnLoan,Selesai',
-            'details' => 'required|array|min:1',
-            'details.*.id_produk' => 'required|exists:produk,id_produk',
-            'details.*.jumlah_produk' => 'required|integer|min:1',
+            'status_pembayaran' => 'required|in:OnLoan,Selesai', // Changed from status_transaksi
+            'total_harga' => 'required|numeric',
+            'items' => 'required|array|min:1', // Changed from details
+            'items.*.id_produk' => 'required|exists:produk,id_produk',
+            'items.*.jumlah_produk' => 'required|integer|min:1',
+            'items.*.harga_item' => 'required|numeric',
+            'items.*.subtotal' => 'required|numeric',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'message' => 'Data tidak valid.', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'status' => false,
+                'message' => 'Data tidak valid.',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         DB::beginTransaction();
         try {
-            $totalHarga = 0;
-            foreach ($request->details as $item) {
-                $produk = ProdukModel::find($item['id_produk']);
-                if (!$produk) throw new Exception('Produk tidak ditemukan.');
-                $totalHarga += $produk->harga * $item['jumlah_produk'];
-            }
-
-            $today = Carbon::now();
-            $kodeTransaksi = 'TRNSK-' . $today->format('dmY-His');
-
-            // Buat transaksi
+            // Use the kode_transaksi from Android instead of generating new one
             $transaksi = TransaksiModel::create([
+                'kode_transaksi' => $request->kode_transaksi,
                 'id_cabang' => $request->id_cabang,
                 'nama_pelanggan' => $request->nama_pelanggan,
-                'tanggal_waktu' => $today,
+                'tanggal_waktu' => $request->tanggal_waktu ?? now(), // Use provided or current time
                 'metode_pembayaran' => $request->metode_pembayaran,
-                'status_transaksi' => $request->status_transaksi,
-                'total_harga' => $totalHarga,
-                'kode_transaksi' => $kodeTransaksi,
+                'status_transaksi' => $request->status_pembayaran, // Map to your database field
+                'total_harga' => $request->total_harga,
             ]);
 
-            // ✨ DEBUG: Cek apakah transaksi berhasil dibuat dan punya ID
-            if (!$transaksi || !$transaksi->id_transaksi) {
-                throw new Exception('Gagal membuat transaksi atau ID transaksi tidak tersedia.');
-            }
-
-            // Log untuk debugging
-            Log::info('Transaksi created:', [
-                'id' => $transaksi->id_transaksi,
-                'kode' => $transaksi->kode_transaksi
-            ]);
-
-            foreach ($request->details as $item) {
-                $produk = ProdukModel::find($item['id_produk']);
-
-                // ✨ PERBAIKAN: Pastikan id_transaksi tidak null
-                $detailData = [
-                    'id_transaksi' => $transaksi->id_transaksi, // Pastikan ini tidak null
+            foreach ($request->items as $item) {
+                DetailTransaksiModel::create([
+                    'id_transaksi' => $transaksi->id_transaksi,
                     'id_produk' => $item['id_produk'],
                     'jumlah_produk' => $item['jumlah_produk'],
-                    'harga_item' => $produk->harga,
-                    'subtotal' => $item['jumlah_produk'] * $produk->harga,
-                ];
+                    'harga_item' => $item['harga_item'],
+                    'subtotal' => $item['subtotal'],
+                ]);
 
-                Log::info('Creating detail transaksi:', $detailData);
-
-                DetailTransaksiModel::create($detailData);
-
-                // Cek stok setelah membuat detail transaksi
+                // Update stock
                 $stok = StokCabangModel::where('id_cabang', $request->id_cabang)
                         ->where('id_produk', $item['id_produk'])
                         ->first();
 
                 if (!$stok || $stok->jumlah_stok < $item['jumlah_produk']) {
-                    throw new Exception('Stok untuk produk "' . $produk->nama_produk . '" tidak mencukupi. Stok tersedia: ' . ($stok ? $stok->jumlah_stok : 0));
+                    throw new Exception('Stok tidak mencukupi untuk produk ID: ' . $item['id_produk']);
                 }
                 $stok->decrement('jumlah_stok', $item['jumlah_produk']);
             }
 
             DB::commit();
+
             return response()->json([
-                'status' => 'success',
-                'message' => 'Pemesanan berhasil dibuat.',
-                'data' => [
-                    'id_transaksi' => $transaksi->id_transaksi,
-                    'kode_transaksi' => $transaksi->kode_transaksi
-                ]
+                'status' => true,
+                'message' => 'Transaksi berhasil dibuat.',
+                'data' => $transaksi
             ], 201);
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Error creating transaction: ' . $e->getMessage());
+            Log::error('Transaction error: ' . $e->getMessage());
             return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal membuat pesanan: ' . $e->getMessage()
+                'status' => false,
+                'message' => 'Gagal membuat transaksi: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -135,7 +113,7 @@ class TransaksiController extends Controller
      */
     public function show($id_transaksi)
     {
-        $transaksi = TransaksiModel::with('detail.produk', 'cabang')->find($id_transaksi);
+        $transaksi = TransaksiModel::with('details.produk', 'cabang')->find($id_transaksi);
 
         if (!$transaksi) {
             return response()->json([

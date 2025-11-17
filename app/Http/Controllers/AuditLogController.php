@@ -62,17 +62,44 @@ class AuditLogController extends Controller
         }
 
         try {
+            // Get unique types
+            $types = ActivityModel::distinct()->pluck('type')->filter()->values();
+
+            // Get unique models - handle cases where model_type might be null or empty
+            $models = ActivityModel::distinct()
+                ->whereNotNull('model_type')
+                ->where('model_type', '!=', '')
+                ->pluck('model_type')
+                ->map(function ($model) {
+                    // Extract just the class name without namespace
+                    $parts = explode('\\', $model);
+                    return end($parts);
+                })
+                ->filter()
+                ->unique()
+                ->values();
+
+            // Get users who have activities
+            $users = \App\Models\User::whereIn('id_user', ActivityModel::distinct()->pluck('id_user'))
+                ->get(['id_user', 'nama'])
+                ->map(function ($user) {
+                    return [
+                        'id_user' => $user->id_user,
+                        'nama' => $user->nama ?: 'Unknown User'
+                    ];
+                });
+
+            // Get date range
+            $dateRange = [
+                'min_date' => ActivityModel::min('created_at'),
+                'max_date' => ActivityModel::max('created_at')
+            ];
+
             $filters = [
-                'types' => ActivityModel::distinct()->pluck('type')->values(),
-                'models' => ActivityModel::distinct()->pluck('model_type')->map(function ($model) {
-                    return class_basename($model);
-                })->unique()->values(),
-                'users' => \App\Models\User::whereIn('id', ActivityModel::distinct()->pluck('id_user'))
-                    ->get(['id', 'name']),
-                'date_range' => [
-                    'min_date' => ActivityModel::min('created_at'),
-                    'max_date' => ActivityModel::max('created_at')
-                ]
+                'types' => $types,
+                'models' => $models,
+                'users' => $users,
+                'date_range' => $dateRange
             ];
 
             return response()->json([
@@ -81,9 +108,11 @@ class AuditLogController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Get filters error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Terjadi kesalahan saat mengambil filter'
+                'message' => 'Terjadi kesalahan saat mengambil filter: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -123,7 +152,7 @@ class AuditLogController extends Controller
         $modelName = class_basename($log->model_type);
         $cleanModelName = str_replace('Model', '', $modelName);
 
-       
+
         $description = $log->description;
         $description = str_replace($modelName, $cleanModelName, $description);
 

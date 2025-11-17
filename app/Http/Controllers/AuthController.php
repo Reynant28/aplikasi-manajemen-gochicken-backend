@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+
 class AuthController extends Controller
 {
     public function loginSuperAdmin(Request $request)
@@ -77,6 +78,10 @@ class AuthController extends Controller
         ]);
     }
 
+    //===============================================================
+    //                  FUNGSI UNTUK ANDROID
+    //===============================================================
+
     public function loginKasir(Request $request)
     {
         $request->validate([
@@ -105,4 +110,22 @@ class AuthController extends Controller
             'cabang' => $cabang, // tambahan data cabang lengkap
         ]);
     }
+
+    public function getCurrentUser(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'user' => $user
+        ]);
+    }
+
 }

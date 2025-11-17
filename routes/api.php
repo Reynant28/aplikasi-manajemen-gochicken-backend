@@ -26,6 +26,12 @@ Route::post('/admin-cabang/login', [AuthController::class, 'loginAdminCabang']);
 Route::post('/kasir/login', [AuthController::class, 'loginKasir']);
 Route::get('/cabang', [CabangController::class, 'index']);
 
+// ===================================================================
+// --- RUTE KHUSUS UNTUK ANDROID APP ---
+// ===================================================================
+Route::get('/android/cabang/{id_cabang}/produk', [ProdukController::class, 'getProdukByCabangForAndroid']);
+Route::get('/current-user', [AuthController::class, 'getCurrentUser']);
+
 // Routes protected by Sanctum middleware
 Route::middleware('auth:sanctum')->group(function () {
     //backup database
@@ -86,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/karyawan/{id_karyawan}', [KaryawanController::class, 'destroy']);
 
     //transaksi
+    Route::post('/transaksi', [TransaksiController::class, 'store']);
     Route::get('/cabang/{id_cabang}/transaksi', [TransaksiController::class, 'getTransaksiByCabang']);
 
     // Pengeluaran
@@ -120,7 +127,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('/pengeluaran', PengeluaranController::class)->except(['getPengeluaranByCabang', 'store', 'update', 'destroy']);
 
         // Transaksi & Laporan Transaksi
-        Route::apiResource('/transaksi', TransaksiController::class)->except(['update']);
+        Route::apiResource('/transaksi', TransaksiController::class)->except(['update', 'store']);
 
         // >>> ROUTE BARU UNTUK REPORT TRANSAKSI <<<
         Route::get('/transaksi/report/pdf/{id_transaksi}', [TransaksiController::class, 'printPDF']);
