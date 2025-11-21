@@ -60,10 +60,9 @@ class PengeluaranController extends Controller
 
         DB::beginTransaction();
         try {
-            $cicilan_harian = null;
+            $cicilan_harian = 0;
 
-            // 🔹 Hitung cicilan harian hanya jika pengeluaran bertipe cicilan
-            if ($request->boolean('is_cicilan_harian')) {
+            if ($request->has('is_cicilan_harian') && $request->is_cicilan_harian === true) {
                 $jumlah_hari_bulan_ini = cal_days_in_month(
                     CAL_GREGORIAN,
                     date('m', strtotime($request->tanggal)),
@@ -74,6 +73,7 @@ class PengeluaranController extends Controller
                     $cicilan_harian = $request->jumlah / $jumlah_hari_bulan_ini;
                 }
             }
+
 
             // 🔹 Tetap simpan JUMLAH TOTAL ke kolom jumlah, cicilan ke kolom cicilan_harian
             $pengeluaran = PengeluaranModel::create([

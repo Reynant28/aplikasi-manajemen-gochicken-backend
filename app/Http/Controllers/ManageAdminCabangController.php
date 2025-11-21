@@ -90,8 +90,63 @@ class ManageAdminCabangController extends Controller
     }
 
     public function updateAdminCabang($id_user, Request $request) {
-        // isi logika update
-        return response()->json(['message' => 'Update logic for admin cabang.']);
+        // 1. Find the admin
+        $admin = UsersModel::find($id_user);
+
+        if (!$admin) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Admin tidak ditemukan.',
+            ], 404);
+        }
+
+        // 2. Validation
+        $validator = Validator::make($request->all(), [
+            'nama' => 'required',
+            'email' => 'required|email',
+            'id_cabang' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data tidak valid.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // 3. Check if cabang is already taken by another admin
+        if ($request->id_cabang != $admin->id_cabang) {
+            $existingAdmin = UsersModel::where('id_cabang', $request->id_cabang)
+                ->where('role', 'admin cabang')
+                ->where('id_user', '!=', $id_user)
+                ->first();
+
+            if ($existingAdmin) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cabang ini sudah memiliki admin cabang.',
+                ], 422);
+            }
+        }
+
+        // 4. Update the admin
+        $admin->nama = $request->nama;
+        $admin->email = $request->email;
+        $admin->id_cabang = $request->id_cabang;
+
+        // Update password only if provided
+        if ($request->password) {
+            $admin->password = Hash::make($request->password);
+        }
+
+        $admin->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Admin cabang berhasil diupdate.',
+            'data' => $admin,
+        ], 200);
     }
 
     public function deleteAdminCabang($id_user) {

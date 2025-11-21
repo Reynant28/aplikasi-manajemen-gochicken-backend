@@ -31,7 +31,7 @@ class ActivityModel extends Model
 
     public function user()
     {
-        return $this->belongsTo(UsersModel::class);
+        return $this->belongsTo(UsersModel::class, 'id_user', 'id_user');
     }
 
     public function cabang()

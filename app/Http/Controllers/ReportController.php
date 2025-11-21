@@ -19,7 +19,7 @@ class ReportController extends Controller
         $salesTrend = DB::table('transaksi')
             ->where('id_cabang', $id)
             ->when($filter === 'minggu', function ($q) {
-                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::SUNDAY), now()->endOfWeek(Carbon::SATURDAY)])
+                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)])
                     ->select(
                         DB::raw('DAYNAME(tanggal_waktu) as period'),
                         DB::raw('SUM(total_harga) as total_pendapatan'),
@@ -62,13 +62,48 @@ class ReportController extends Controller
             ->get();
 
         // 3. DATA FOR SUMMARY CARDS
-        $totalPendapatan = DB::table('transaksi')->where('id_cabang', $id)->sum('total_harga');
-        $totalTransaksi = DB::table('transaksi')->where('id_cabang', $id)->count();
+        $totalPendapatan = DB::table('transaksi')
+                            ->where('id_cabang', $id)
+                            ->when($filter === 'minggu', function ($q) {
+                                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
+                            })
+                            ->when($filter === 'bulan', function ($q) {
+                                $q->whereMonth('tanggal_waktu', now()->month)
+                                  ->whereYear('tanggal_waktu', now()->year);
+                            })
+                            ->when($filter === 'tahun', function ($q) {
+                                $q->whereYear('tanggal_waktu', now()->year);
+                            })
+                            ->sum('total_harga');
+        $totalTransaksi = DB::table('transaksi')
+                            ->where('id_cabang', $id)
+                            ->when($filter === 'minggu', function ($q) {
+                                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
+                            })
+                            ->when($filter === 'bulan', function ($q) {
+                                $q->whereMonth('tanggal_waktu', now()->month)
+                                  ->whereYear('tanggal_waktu', now()->year);
+                            })
+                            ->when($filter === 'tahun', function ($q) {
+                                $q->whereYear('tanggal_waktu', now()->year);
+                            })
+                            ->count();
+
         $avgTransaksi = $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0;
 
         $busiestDay = DB::table('transaksi')
             ->where('id_cabang', $id)
             ->select(DB::raw('DAYNAME(tanggal_waktu) as day'), DB::raw('COUNT(*) as count'))
+            ->when($filter === 'minggu', function ($q) {
+                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
+            })
+            ->when($filter === 'bulan', function ($q) {
+                $q->whereMonth('tanggal_waktu', now()->month)
+                  ->whereYear('tanggal_waktu', now()->year);
+            })
+            ->when($filter === 'tahun', function ($q) {
+                $q->whereYear('tanggal_waktu', now()->year);
+            })
             ->groupBy('day')
             ->orderByDesc('count')
             ->first();
@@ -99,7 +134,7 @@ class ReportController extends Controller
         // 1. SALES TREND (gabungan semua cabang)
         $salesTrend = DB::table('transaksi')
             ->when($filter === 'minggu', function ($q) {
-                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::SUNDAY), now()->endOfWeek(Carbon::SATURDAY)])
+                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)])
                     ->select(
                         DB::raw('DAYNAME(tanggal_waktu) as period'),
                         DB::raw('SUM(total_harga) as total_pendapatan'),
@@ -135,7 +170,7 @@ class ReportController extends Controller
             ->join('transaksi', 'detail_transaksi.id_transaksi', '=', 'transaksi.id_transaksi')
             ->join('produk', 'detail_transaksi.id_produk', '=', 'produk.id_produk')
             ->when($filter === 'minggu', function ($q) {
-                $q->whereBetween('transaksi.tanggal_waktu', [now()->startOfWeek(Carbon::SUNDAY), now()->endOfWeek(Carbon::SATURDAY)]);
+                $q->whereBetween('transaksi.tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
             })
             ->when($filter === 'bulan', function ($q) {
                 $q->whereMonth('transaksi.tanggal_waktu', now()->month)
@@ -151,12 +186,44 @@ class ReportController extends Controller
             ->get();
 
         // 3. SUMMARY (gabungan semua cabang)
-        $totalPendapatan = DB::table('transaksi')->sum('total_harga');
-        $totalTransaksi = DB::table('transaksi')->count();
+        $totalPendapatan = DB::table('transaksi')
+                            ->when($filter === 'minggu', function ($q) {
+                                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
+                            })
+                            ->when($filter === 'bulan', function ($q) {
+                                $q->whereMonth('tanggal_waktu', now()->month)
+                                ->whereYear('tanggal_waktu', now()->year);
+                            })
+                            ->when($filter === 'tahun', function ($q) {
+                                $q->whereYear('tanggal_waktu', now()->year);
+                            })
+                            ->sum('total_harga');
+        $totalTransaksi = DB::table('transaksi')
+                            ->when($filter === 'minggu', function ($q) {
+                                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
+                            })
+                            ->when($filter === 'bulan', function ($q) {
+                                $q->whereMonth('tanggal_waktu', now()->month)
+                                ->whereYear('tanggal_waktu', now()->year);
+                            })
+                            ->when($filter === 'tahun', function ($q) {
+                                $q->whereYear('tanggal_waktu', now()->year);
+                            })
+                            ->count();
         $avgTransaksi = $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0;
 
         $busiestDay = DB::table('transaksi')
             ->select(DB::raw('DAYNAME(tanggal_waktu) as day'), DB::raw('COUNT(*) as count'))
+            ->when($filter === 'minggu', function ($q) {
+                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
+            })
+            ->when($filter === 'bulan', function ($q) {
+                $q->whereMonth('tanggal_waktu', now()->month)
+                  ->whereYear('tanggal_waktu', now()->year);
+            })
+            ->when($filter === 'tahun', function ($q) {
+                $q->whereYear('tanggal_waktu', now()->year);
+            })
             ->groupBy('day')
             ->orderByDesc('count')
             ->first();
@@ -231,6 +298,60 @@ class ReportController extends Controller
             ->paginate($request->get('limit', 10));
 
         return response()->json($karyawan);
+    }
+
+    // Add this method to your ReportController
+    public function monthlyRevenueReport(Request $request)
+    {
+        $user = $request->user();
+        $year = $request->query('year', Carbon::now()->year);
+
+        $query = DB::table('transaksi')
+            ->select(
+                DB::raw('YEAR(tanggal_waktu) as year'),
+                DB::raw('MONTH(tanggal_waktu) as month'),
+                DB::raw('MONTHNAME(tanggal_waktu) as month_name'),
+                DB::raw('SUM(total_harga) as total_pendapatan'),
+                DB::raw('COUNT(id_transaksi) as total_transaksi')
+            )
+            ->whereYear('tanggal_waktu', $year)
+            ->groupBy('year', 'month', 'month_name')
+            ->orderBy('year', 'desc')
+            ->orderBy('month', 'desc');
+
+        // Filter by branch if user is admin cabang
+        if ($user->role === 'admin cabang') {
+            $query->where('id_cabang', $user->id_cabang);
+        }
+
+        $monthlyData = $query->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $monthlyData,
+            'year' => (int)$year
+        ]);
+    }
+
+    // Optional: For year selection dropdown
+    public function availableYears(Request $request)
+    {
+        $user = $request->user();
+
+        $query = DB::table('transaksi')
+            ->select(DB::raw('DISTINCT YEAR(tanggal_waktu) as year'))
+            ->orderBy('year', 'desc');
+
+        if ($user->role === 'admin cabang') {
+            $query->where('id_cabang', $user->id_cabang);
+        }
+
+        $years = $query->pluck('year');
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $years
+        ]);
     }
 
 

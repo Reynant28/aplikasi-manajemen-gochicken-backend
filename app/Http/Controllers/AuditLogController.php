@@ -23,7 +23,10 @@ class AuditLogController extends Controller
 
         try {
             $query = ActivityModel::with(['user', 'cabang'])
-                ->orderBy('created_at', 'desc');
+            ->whereHas('user', function ($q) {
+                $q->where('role', '!=', 'kasir'); 
+            })
+            ->orderBy('created_at', 'desc');
 
             $query = $this->applyFilters($query, $request);
 
@@ -90,9 +93,13 @@ class AuditLogController extends Controller
                 });
 
             // Get date range
-            $dateRange = [
-                'min_date' => ActivityModel::min('created_at'),
-                'max_date' => ActivityModel::max('created_at')
+             $dateRange = [
+                'min_date' => ActivityModel::whereHas('user', function ($q) {
+                    $q->where('role', '!=', 'kasir');
+                })->min('created_at'),
+                'max_date' => ActivityModel::whereHas('user', function ($q) {
+                    $q->where('role', '!=', 'kasir');
+                })->max('created_at')
             ];
 
             $filters = [
@@ -119,6 +126,10 @@ class AuditLogController extends Controller
 
     private function applyFilters($query, Request $request)
     {
+        $query->whereHas('user', function ($q) {
+            $q->where('role', '!=', 'kasir');
+        });
+
         if ($request->has('type') && $request->type !== 'all') {
             $query->where('type', $request->type);
         }
@@ -161,7 +172,7 @@ class AuditLogController extends Controller
             'type' => $log->type,
             'model' => $cleanModelName,
             'description' => $description,
-            'user' => $log->user ? $log->user->name : 'System',
+            'user' => $log->user ? $log->user->nama : 'System',
             'cabang' => $log->cabang ? $log->cabang->nama_cabang : 'N/A',
             'timestamp' => $log->created_at->toISOString(),
             'old_data' => $log->old_data,

@@ -3,24 +3,24 @@
 namespace App\Models;
 
 use App\Traits\LogsActivity;
+use App\Models\DetailPengeluaranModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class BahanBakuModel extends Model
+class BahanBakuPakaiModel extends Model
 {
     use HasFactory, LogsActivity;
 
-    protected $table = 'bahan_baku';
-    protected $primaryKey = 'id_bahan_baku';
-    public $incrementing = false;
+    protected $table = 'bahan_baku_harian';
+    protected $primaryKey = 'id_pemakaian';
+    public $incrementing = true;
 
     protected $fillable = [
+        'tanggal',
+        'jumlah_pakai',
+        'catatan',
         'id_bahan_baku',
-        'nama_bahan',
-        'satuan',
-        'harga_satuan',
-        'jumlah_stok',
-        'id_pemakaian'
+        'id_cabang',
     ];
 
     // Relasi: satu bahan baku bisa muncul di banyak detail pengeluaran
@@ -29,9 +29,9 @@ class BahanBakuModel extends Model
         return $this->hasMany(DetailPengeluaranModel::class, 'id_bahan_baku', 'id_bahan_baku');
     }
 
-    // Relasi: Bahan Baku Pakai
-    public function bahanBakuPakai()
+    // Relasi: bahan baku
+    public function bahanBaku()
     {
-        return $this->hasMany(BahanBakuPakaiModel::class, 'id_pemakaian', 'id_pemakaian');
+        return $this->belongsTo(BahanBakuModel::class, 'id_bahan_baku');
     }
 }

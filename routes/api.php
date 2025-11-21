@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JenisPengeluaranController;
 use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\ManageAdminCabangController;
+use App\Http\Controllers\ManageKasirController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\PengeluaranController;
 use App\Http\Controllers\ProdukController;
@@ -55,17 +56,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/cabang/{id}', [DashboardController::class, 'cabangStats']);
     Route::get('/dashboard/cabang/{id}/chart', [DashboardController::class, 'cabangChart']);
     Route::get('/dashboard/user/activities', [DashboardController::class, 'userActivities']);
+    Route::get('/reports/cabang/{id}/month-comparison', [DashboardController::class, 'monthComparisonCabang']);
     Route::get('/reports/cabang/{id}', [ReportController::class, 'cabangReport']);
     Route::get('/reports/cabang/{id}/products', [ReportController::class, 'productReportPaginated']);
     Route::get('/reports/cabang/{id}/sales/transactions', [ReportController::class, 'salesTransactionsPaginated']);
     Route::get('/reports/cabang/{id}/sales/expenses', [ReportController::class, 'salesExpensesPaginated']);
     Route::get('/reports/cabang/{id}/employees', [ReportController::class, 'employeeReportPaginated']);
+    Route::get('/dashboard/cabang/{id}/declining-products', [DashboardController::class, 'cabangDecliningProducts']);
+    Route::get('/dashboard/cabang/{id}/low-stock', [DashboardController::class, 'cabangLowStockAlert']);
+
+    // --- DAILY REPORT ROUTES ---
+    Route::get('/report/harian/cabang/{id_cabang}', [ReportDailyController::class, 'getDailyReportBranch']);
 
 
     Route::get('/report/harian', [ReportDailyController::class, 'getDailyReport']);
     Route::put('/report/update-status/{id}', [ReportDailyController::class, 'updateOrderStatus']);
 
-    //bahan baku pakai harian
     // Pemakaian bahan baku harian
     Route::get('/bahan-baku-pakai', [BahanBakuPakaiController::class, 'index']);
     Route::post('/bahan-baku-pakai', [BahanBakuPakaiController::class, 'store']);
@@ -79,6 +85,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/sales/transactions', [ReportController::class, 'salesTransactionsSuperAdmin']);
     Route::get('/reports/sales/expenses', [ReportController::class, 'salesExpensesSuperAdmin']);
     Route::get('/reports/employees', [ReportController::class, 'employeeReportSuperAdmin']);
+    Route::get('/reports/monthly-revenue', [ReportController::class, 'monthlyRevenueReport']);
+    Route::get('/reports/available-years', [ReportController::class, 'availableYears']);
 
     // --- FUNCTIONAL ROUTES FOR ADMIN CABANG ---
     // Product & Stock
@@ -90,6 +98,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/karyawan', [KaryawanController::class, 'store']);
     Route::put('/karyawan/{id_karyawan}', [KaryawanController::class, 'update']);
     Route::delete('/karyawan/{id_karyawan}', [KaryawanController::class, 'destroy']);
+
+    //kasir
+    Route::get('/kasir', [ManageKasirController::class, 'listKasir']);
+    Route::post('/create-kasir', [ManageKasirController::class, 'createKasir']);
+    Route::put('/kasir/{id_user}', [ManageKasirController::class, 'updateKasir']);
+    Route::delete('/kasir/{id_user}', [ManageKasirController::class, 'deleteKasir']);
 
     //transaksi
     Route::post('/transaksi', [TransaksiController::class, 'store']);
@@ -121,7 +135,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Resource Management
         Route::apiResource('/cabang', CabangController::class)->except(['index']);
-        Route::apiResource('/produk', ProdukController::class)->except(['getProdukByCabang', 'updateStok']);
+        Route::apiResource('/produk', ProdukController::class)->except(['getProdukByCabang']);
         Route::apiResource('/bahan-baku', BahanBakuController::class)->except(['index']);
         Route::apiResource('/karyawan', KaryawanController::class)->except(['getKaryawanByCabang', 'store', 'update', 'destroy']);
         Route::apiResource('/pengeluaran', PengeluaranController::class)->except(['getPengeluaranByCabang', 'store', 'update', 'destroy']);
@@ -136,6 +150,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Admin Cabang Management
         Route::get('/admin-cabang', [ManageAdminCabangController::class, 'listAdmin']);
+        Route::get('/admin-cabang/{id}/password', [ManageAdminCabangController::class, 'showPassword']);
         Route::get('/cabang-without-admin', [ManageAdminCabangController::class, 'getCabangWithoutAdmin']);
         Route::post('/create-admin-cabang', [ManageAdminCabangController::class, 'createAdminCabang']);
         Route::put('/admin-cabang/{id_user}', [ManageAdminCabangController::class, 'updateAdminCabang']);

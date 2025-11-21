@@ -18,7 +18,7 @@ class PemesananController extends Controller
     public function index(Request $request, $id_cabang)
     {
         $query = TransaksiModel::where('id_cabang', $id_cabang)
-            ->whereNotNull('nama_pelanggan')
+            ->whereNot('nama_pelanggan', 'Walk In Customer')
             ->with(['details.produk']);
 
         if ($request->has('status') && $request->status !== 'semua') {

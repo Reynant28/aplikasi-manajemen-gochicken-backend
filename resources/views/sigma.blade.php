@@ -1,1 +1,0 @@
-kalo kamu liat teks ini habis pull bearti jago

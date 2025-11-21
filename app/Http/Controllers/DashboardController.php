@@ -2,21 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ActivityModel;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-
-use App\Models\KaryawanModel;
-use App\Models\ProdukModel;
-use App\Models\PengeluaranModel;
-use App\Models\CabangModel;
 use App\Models\UsersModel;
+use App\Models\CabangModel;
+use App\Models\ProdukModel;
+
+use Illuminate\Http\Request;
+use App\Models\ActivityModel;
+use App\Models\KaryawanModel;
+use App\Models\PengeluaranModel;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
-    // ... (existing methods remain the same)
-
     /**
      * ✨ NEW: Month-to-Month Comparison
      */
@@ -33,40 +32,45 @@ class DashboardController extends Controller
         // Build base query
         $baseQuery = DB::table('transaksi');
 
+        // Filter by cabang for admin cabang
         if ($user->role === 'admin cabang') {
             $baseQuery->where('id_cabang', $user->id_cabang);
         }
 
-        // Current month stats
+        // Current month stats - only completed transactions
         $currentRevenue = (clone $baseQuery)
             ->whereYear('tanggal_waktu', $currentYear)
             ->whereMonth('tanggal_waktu', $currentMonth)
+            ->where('status_transaksi', 'selesai')
             ->sum('total_harga');
 
         $currentTransactions = (clone $baseQuery)
             ->whereYear('tanggal_waktu', $currentYear)
             ->whereMonth('tanggal_waktu', $currentMonth)
+            ->where('status_transaksi', 'selesai')
             ->count();
 
-        // Previous month stats
+        // Previous month stats - only completed transactions
         $previousRevenue = (clone $baseQuery)
             ->whereYear('tanggal_waktu', $previousYear)
             ->whereMonth('tanggal_waktu', $previousMonth)
+            ->where('status_transaksi', 'selesai')
             ->sum('total_harga');
 
         $previousTransactions = (clone $baseQuery)
             ->whereYear('tanggal_waktu', $previousYear)
             ->whereMonth('tanggal_waktu', $previousMonth)
+            ->where('status_transaksi', 'selesai')
             ->count();
 
         // Calculate percentage changes
         $revenueChange = $previousRevenue > 0
             ? (($currentRevenue - $previousRevenue) / $previousRevenue) * 100
-            : 0;
+            : ($currentRevenue > 0 ? 100 : 0); // If no previous revenue but current exists, show 100% growth
 
         $transactionChange = $previousTransactions > 0
             ? (($currentTransactions - $previousTransactions) / $previousTransactions) * 100
-            : 0;
+            : ($currentTransactions > 0 ? 100 : 0);
 
         // Calculate average per transaction
         $avgTransaction = $currentTransactions > 0
@@ -79,7 +83,7 @@ class DashboardController extends Controller
 
         $avgChange = $prevAvgTransaction > 0
             ? (($avgTransaction - $prevAvgTransaction) / $prevAvgTransaction) * 100
-            : 0;
+            : ($avgTransaction > 0 ? 100 : 0);
 
         return response()->json([
             'status' => 'success',
@@ -95,6 +99,127 @@ class DashboardController extends Controller
                 'avg_change' => (float) $avgChange,
             ],
         ]);
+    }
+
+    public function monthComparisonCabang(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            // Validate user has cabang access if they're admin cabang
+            if ($user->role === 'admin cabang' && !$user->id_cabang) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Admin cabang tidak memiliki akses cabang'
+                ], 403);
+            }
+
+            // Get current month and previous month
+            $currentMonth = Carbon::now()->month;
+            $currentYear = Carbon::now()->year;
+            $previousMonth = Carbon::now()->subMonth()->month;
+            $previousYear = Carbon::now()->subMonth()->year;
+
+            // Build base query
+            $baseQuery = DB::table('transaksi');
+
+            // Filter by cabang for admin cabang
+            if ($user->role === 'admin cabang') {
+                $baseQuery->where('id_cabang', $user->id_cabang);
+            }
+
+            // Current month stats - only completed transactions
+            $currentRevenue = (clone $baseQuery)
+                ->whereYear('tanggal_waktu', $currentYear)
+                ->whereMonth('tanggal_waktu', $currentMonth)
+                ->where('status_transaksi', 'selesai')
+                ->sum('total_harga');
+
+            $currentTransactions = (clone $baseQuery)
+                ->whereYear('tanggal_waktu', $currentYear)
+                ->whereMonth('tanggal_waktu', $currentMonth)
+                ->where('status_transaksi', 'selesai')
+                ->count();
+
+            // Previous month stats - only completed transactions
+            $previousRevenue = (clone $baseQuery)
+                ->whereYear('tanggal_waktu', $previousYear)
+                ->whereMonth('tanggal_waktu', $previousMonth)
+                ->where('status_transaksi', 'selesai')
+                ->sum('total_harga');
+
+            $previousTransactions = (clone $baseQuery)
+                ->whereYear('tanggal_waktu', $previousYear)
+                ->whereMonth('tanggal_waktu', $previousMonth)
+                ->where('status_transaksi', 'selesai')
+                ->count();
+
+            // Calculate percentage changes
+            $revenueChange = $previousRevenue > 0
+                ? (($currentRevenue - $previousRevenue) / $previousRevenue) * 100
+                : ($currentRevenue > 0 ? 100 : 0); // If no previous revenue but current exists, show 100% growth
+
+            $transactionChange = $previousTransactions > 0
+                ? (($currentTransactions - $previousTransactions) / $previousTransactions) * 100
+                : ($currentTransactions > 0 ? 100 : 0);
+
+            // Calculate average per transaction
+            $avgTransaction = $currentTransactions > 0
+                ? $currentRevenue / $currentTransactions
+                : 0;
+
+            $prevAvgTransaction = $previousTransactions > 0
+                ? $previousRevenue / $previousTransactions
+                : 0;
+
+            $avgChange = $prevAvgTransaction > 0
+                ? (($avgTransaction - $prevAvgTransaction) / $prevAvgTransaction) * 100
+                : ($avgTransaction > 0 ? 100 : 0);
+
+            // Get cabang info if admin cabang
+            $cabangInfo = null;
+            if ($user->role === 'admin cabang') {
+                $cabangInfo = DB::table('cabang')
+                    ->where('id_cabang', $user->id_cabang)
+                    ->select('nama_cabang', 'alamat')
+                    ->first();
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'current_revenue' => (float) $currentRevenue,
+                    'previous_revenue' => (float) $previousRevenue,
+                    'revenue_change' => (float) round($revenueChange, 2),
+                    'current_transactions' => (int) $currentTransactions,
+                    'previous_transactions' => (int) $previousTransactions,
+                    'transaction_change' => (float) round($transactionChange, 2),
+                    'avg_transaction' => (float) round($avgTransaction, 2),
+                    'prev_avg_transaction' => (float) round($prevAvgTransaction, 2),
+                    'avg_change' => (float) round($avgChange, 2),
+                    'cabang_info' => $cabangInfo,
+                    'period' => [
+                        'current' => [
+                            'month' => $currentMonth,
+                            'year' => $currentYear,
+                            'label' => Carbon::create()->month($currentMonth)->format('F Y')
+                        ],
+                        'previous' => [
+                            'month' => $previousMonth,
+                            'year' => $previousYear,
+                            'label' => Carbon::create()->month($previousMonth)->format('F Y')
+                        ]
+                    ]
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat membandingkan data bulanan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -285,6 +410,60 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function cabangDecliningProducts($id)
+    {
+        $user = request()->user();
+
+        if ($user->role !== 'admin cabang' || $user->id_cabang != $id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        try {
+            // Your declining products logic for cabang here
+            $data = [];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch declining products data'
+            ], 500);
+        }
+    }
+
+    public function cabangLowStockAlert($id)
+    {
+        $user = request()->user();
+
+        if ($user->role !== 'admin cabang' || $user->id_cabang != $id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        try {
+            // Your low stock logic for cabang here
+            $data = [];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch low stock data'
+            ], 500);
+        }
+    }
+
     public function globalStats()
     {
         $totalProduk = DB::table('produk')->count();
@@ -429,11 +608,13 @@ class DashboardController extends Controller
             ->take(15)
             ->get()
             ->map(function ($activity) {
+                $description = $this->extractActivityDescription($activity->description, $activity->model_type);
                 return [
-                    'description' => $activity->description,
+                    'description' => $description,
                     'timestamp' => $activity->created_at->toISOString(),
                     'type' => $activity->type,
                     'model' => class_basename($activity->model_type),
+                    'user' => $activity->user ? $activity->user->nama : 'System',
                 ];
             })
             ->values()
@@ -449,100 +630,98 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'admin cabang') {
-            return response()->json(['status' => 'success', 'data' => []]);
+        if (!$user || $user->role !== 'admin cabang') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized'
+            ], 403);
         }
 
         $cabangId = $user->id_cabang;
 
-        // Karyawan Activities for this branch - Only valid timestamps
-        $karyawanActivities = KaryawanModel::where('id_cabang', $cabangId)
-            ->whereNotNull('created_at')
-            ->whereNotNull('updated_at')
-            ->orderBy('updated_at', 'desc')
-            ->take(8)
-            ->get()
-            ->map(function ($item) {
-                $type = $this->determineActivityType($item->created_at, $item->updated_at);
-                $action = $type === 'add' ? 'Menambah' : 'Memperbarui';
+        try {
+            // Optimized query dengan select hanya kolom yang diperlukan
+            $recentActivities = ActivityModel::select([
+                    'activities.description',
+                    'activities.created_at',
+                    'activities.type',
+                    'activities.model_type',
+                    'users.nama as user_name'
+                ])
+                ->join('users', 'activities.id_user', '=', 'users.id_user')
+                ->where('users.id_cabang', $cabangId)
+                ->where('users.role', $user->role)
+                ->orderBy('activities.created_at', 'desc')
+                ->limit(15)
+                ->get()
+                ->map(function ($activity) {
+                    $description = $this->extractActivityDescription($activity->description, $activity->model_type);
+                    return [
+                        'description' => $description,
+                        'timestamp' => $activity->created_at->toISOString(),
+                        'type' => $activity->type,
+                        'model' => class_basename($activity->model_type),
+                        'user' => $activity->user_name ?: 'System'
+                    ];
+                })
+                ->values()
+                ->all();
 
-                return [
-                    'description' => "{$action} karyawan: {$item->nama_karyawan}",
-                    'timestamp' => $item->updated_at->toISOString(),
-                    'type' => $type,
-                    'model' => 'Karyawan'
-                ];
-            });
+            return response()->json([
+                'status' => 'success',
+                'data' => $recentActivities
+            ]);
 
-        // Pengeluaran Activities for this branch - Only valid timestamps
-        $pengeluaranActivities = PengeluaranModel::where('id_cabang', $cabangId)
-            ->whereNotNull('created_at')
-            ->whereNotNull('updated_at')
-            ->orderBy('updated_at', 'desc')
-            ->take(8)
-            ->get()
-            ->map(function ($item) {
-                $type = $this->determineActivityType($item->created_at, $item->updated_at);
-                $action = $type === 'add' ? 'Menambah' : 'Memperbarui';
+        } catch (\Exception $e) {
+            Log::error('User Activities Error: ' . $e->getMessage());
 
-                return [
-                    'description' => "{$action} pengeluaran: Rp " . number_format($item->jumlah, 0, ',', '.') . " - {$item->keterangan}",
-                    'timestamp' => $item->updated_at->toISOString(),
-                    'type' => $type,
-                    'model' => 'Pengeluaran'
-                ];
-            });
-
-        // Produk Activities for this branch - Only valid timestamps
-        $produkActivities = ProdukModel::where('id_stock_cabang', $cabangId)
-            ->whereNotNull('created_at')
-            ->whereNotNull('updated_at')
-            ->orderBy('updated_at', 'desc')
-            ->take(8)
-            ->get()
-            ->map(function ($item) {
-                $type = $this->determineActivityType($item->created_at, $item->updated_at);
-                $action = $type === 'add' ? 'Menambah' : 'Memperbarui';
-
-                return [
-                    'description' => "{$action} produk: {$item->nama_produk}",
-                    'timestamp' => $item->updated_at->toISOString(),
-                    'type' => $type,
-                    'model' => 'Produk'
-                ];
-            });
-
-        // Combine and sort activities
-        $recentActivities = collect()
-            ->concat($karyawanActivities)
-            ->concat($pengeluaranActivities)
-            ->concat($produkActivities)
-            ->sortByDesc('timestamp')
-            ->take(10)
-            ->values()
-            ->all();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $recentActivities
-        ]);
+            // Return empty array jika ada error
+            return response()->json([
+                'status' => 'success',
+                'data' => []
+            ]);
+        }
     }
 
     /**
-     * Determine activity type based on created_at and updated_at timestamps
-     *
-     * @param mixed $createdAt
-     * @param mixed $updatedAt
-     * @return string
+     * Extract description by removing only the model name but keeping the action
      */
-    private function determineActivityType($createdAt, $updatedAt)
+    private function extractActivityDescription($description, $modelType)
     {
-        // Ensure both are Carbon instances
-        $created = $createdAt instanceof Carbon ? $createdAt : Carbon::parse($createdAt);
-        $updated = $updatedAt instanceof Carbon ? $updatedAt : Carbon::parse($updatedAt);
+        if (empty($description)) {
+            return $description;
+        }
 
-        // If created and updated are the same (within 1 second), it's an add operation
-        // Otherwise, it's an update
-        return $created->diffInSeconds($updated) <= 1 ? 'add' : 'update';
+        // If model type is available, remove only the model name
+        if (!empty($modelType)) {
+            $modelName = class_basename($modelType);
+
+            // Remove the model name but keep the action
+            // Pattern: remove "ModelName:" or " ModelName:"
+            $pattern = '/\s*' . preg_quote($modelName, '/') . ':\s*/';
+            $cleanDescription = preg_replace($pattern, ': ', $description);
+
+            // If the replacement worked and it's different from original, return it
+            if ($cleanDescription !== $description) {
+                return $cleanDescription;
+            }
+        }
+
+        // Fallback: try to remove common model patterns but keep action
+        $patterns = [
+            '/([A-Z][a-zA-Z]+)Model:\s*/', // Remove "ModelNameModel:" but keep action
+            '/([A-Z][a-zA-Z]+):\s*/',      // Remove "ModelName:" but keep action
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $description)) {
+                // Replace model name with colon but keep everything else
+                $cleanDescription = preg_replace($pattern, '$1: ', $description);
+                return $cleanDescription;
+            }
+        }
+
+        // If no patterns match, return original description
+        return $description;
     }
 }
