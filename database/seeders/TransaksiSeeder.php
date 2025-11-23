@@ -139,35 +139,25 @@ class TransaksiSeeder extends Seeder
 
         // === DETAIL TRANSAKSI HARI INI ===
         $detailHariIni = [
-            // Transaksi 1: Kopi Hitam (15000)
             ['id_detail' => 1, 'id_transaksi' => 1, 'id_produk' => 3, 'jumlah_produk' => 1, 'harga_item' => 15000, 'subtotal' => 15000],
 
-            // Transaksi 2: Kopi Susu (12000)
             ['id_detail' => 2, 'id_transaksi' => 2, 'id_produk' => 2, 'jumlah_produk' => 1, 'harga_item' => 12000, 'subtotal' => 12000],
 
-            // Transaksi 3: Kopi Hitam (15000) + Donat (6000)
             ['id_detail' => 3, 'id_transaksi' => 3, 'id_produk' => 3, 'jumlah_produk' => 1, 'harga_item' => 15000, 'subtotal' => 15000],
             ['id_detail' => 4, 'id_transaksi' => 3, 'id_produk' => 7, 'jumlah_produk' => 1, 'harga_item' => 6000, 'subtotal' => 6000],
 
-            // Transaksi 4: Matcha Latte (9000)
             ['id_detail' => 5, 'id_transaksi' => 4, 'id_produk' => 4, 'jumlah_produk' => 1, 'harga_item' => 9000, 'subtotal' => 9000],
 
-            // Transaksi 5: Kopi (10000)
             ['id_detail' => 6, 'id_transaksi' => 5, 'id_produk' => 1, 'jumlah_produk' => 1, 'harga_item' => 10000, 'subtotal' => 10000],
 
-            // Transaksi 6: Croissant (7000)
             ['id_detail' => 7, 'id_transaksi' => 6, 'id_produk' => 6, 'jumlah_produk' => 1, 'harga_item' => 7000, 'subtotal' => 7000],
 
-            // Transaksi 7: Donat (6000)
             ['id_detail' => 8, 'id_transaksi' => 7, 'id_produk' => 7, 'jumlah_produk' => 1, 'harga_item' => 6000, 'subtotal' => 6000],
 
-            // Transaksi 8 (Vertin): 8x Kopi Hitam (15000 each)
             ['id_detail' => 9, 'id_transaksi' => 8, 'id_produk' => 3, 'jumlah_produk' => 8, 'harga_item' => 15000, 'subtotal' => 120000],
 
-            // Transaksi 9 (Aleph): 10x Kopi Hitam (15000 each)
             ['id_detail' => 10, 'id_transaksi' => 9, 'id_produk' => 3, 'jumlah_produk' => 10, 'harga_item' => 15000, 'subtotal' => 150000],
 
-            // Transaksi 10 (Lucy - OnLoan): 10x Kopi Susu (12000) + 10x Matcha (9000) + 5x Croissant (7000)
             ['id_detail' => 11, 'id_transaksi' => 10, 'id_produk' => 2, 'jumlah_produk' => 10, 'harga_item' => 12000, 'subtotal' => 120000],
             ['id_detail' => 12, 'id_transaksi' => 10, 'id_produk' => 4, 'jumlah_produk' => 5, 'harga_item' => 9000, 'subtotal' => 45000],
             ['id_detail' => 13, 'id_transaksi' => 10, 'id_produk' => 6, 'jumlah_produk' => 5, 'harga_item' => 7000, 'subtotal' => 35000],
@@ -183,7 +173,7 @@ class TransaksiSeeder extends Seeder
         }
         DB::table('detail_transaksi')->insert($detailHariIni);
 
-        // === DUMMY DATA (Januari–Agustus) ===
+        // === DUMMY DATA (Januari–October) ===
         $startMonth = Carbon::create(2025, 1, 1);
         $produkHarga = [
             1 => 10000, 2 => 12000, 3 => 15000, 4 => 9000,
@@ -193,7 +183,7 @@ class TransaksiSeeder extends Seeder
         $detailCounter = 50;
         $transaksiCounter = 11;
 
-        for ($m = 0; $m < 8; $m++) {
+        for ($m = 0; $m < 10; $m++) {
             $bulan = $startMonth->copy()->addMonths($m);
 
             for ($w = 0; $w < 4; $w++) {

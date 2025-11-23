@@ -68,6 +68,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- DAILY REPORT ROUTES ---
     Route::get('/report/harian/cabang/{id_cabang}', [ReportDailyController::class, 'getDailyReportBranch']);
 
+    Route::prefix('backup')->group(function () {
+        Route::get('/export', [BackupController::class, 'exportDatabase']);
+        Route::post('/import', [BackupController::class, 'importDatabase']);
+        Route::get('/list', [BackupController::class, 'listBackups']);
+        Route::delete('/delete/{filename}', [BackupController::class, 'deleteBackup']);
+    });
 
     Route::get('/report/harian', [ReportDailyController::class, 'getDailyReport']);
     Route::put('/report/update-status/{id}', [ReportDailyController::class, 'updateOrderStatus']);
@@ -156,10 +162,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin-cabang/{id_user}', [ManageAdminCabangController::class, 'updateAdminCabang']);
         Route::delete('/admin-cabang/{id_user}', [ManageAdminCabangController::class, 'deleteAdminCabang']);
 
-        Route::middleware(['auth'])->group(function () {
-            Route::get('/backup/export', [BackupController::class, 'exportDatabase']);
-            Route::get('/backup/mysqldump', [BackupController::class, 'exportDatabaseWithMysqldump']);
-        });
         // Audit Log Routes
         Route::get('/audit-logs', [AuditLogController::class, 'index']);
         Route::get('/audit-logs/filters', [AuditLogController::class, 'getFilters']);

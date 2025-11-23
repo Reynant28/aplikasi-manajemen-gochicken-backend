@@ -500,42 +500,76 @@ class DashboardController extends Controller
     public function globalChart(Request $request)
     {
         $filter = $request->query('filter', 'tahun');
+        $year = $request->query('year', now()->year);
 
-        $pendapatan = DB::table('transaksi')
-            ->selectRaw("DATE(tanggal_waktu) as tanggal, SUM(total_harga) as total")
-            ->when($filter === 'minggu', function ($q) {
-                $q->whereBetween('tanggal_waktu', [now()->startOfWeek(Carbon::SUNDAY), now()->endOfWeek(Carbon::SATURDAY)]);
-            })
-            ->when($filter === 'bulan', function ($q) {
-                $q->whereYear('tanggal_waktu', now()->year)->whereMonth('tanggal_waktu', now()->month);
-            })
-            ->when($filter === 'tahun', function ($q) {
-                $q->whereYear('tanggal_waktu', now()->year);
-            })
-            ->groupBy('tanggal')
-            ->orderBy('tanggal')
-            ->get();
+        // Pendapatan data
+        if ($filter === 'minggu') {
+            $pendapatan = DB::table('transaksi')
+                ->selectRaw("DAYNAME(tanggal_waktu) as period, SUM(total_harga) as total")
+                ->whereBetween('tanggal_waktu', [now()->startOfWeek(), now()->endOfWeek()])
+                ->groupBy('period')
+                ->orderByRaw("FIELD(period, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')")
+                ->get();
 
-        $pengeluaran = DB::table('pengeluaran')
-            ->selectRaw("DATE(tanggal) as tanggal, SUM(jumlah) as total")
-            ->when($filter === 'minggu', function ($q) {
-                $q->whereBetween('tanggal', [now()->startOfWeek(Carbon::SUNDAY), now()->endOfWeek(Carbon::SATURDAY)]);
-            })
-            ->when($filter === 'bulan', function ($q) {
-                $q->whereYear('tanggal', now()->year)->whereMonth('tanggal', now()->month);
-            })
-            ->when($filter === 'tahun', function ($q) {
-                $q->whereYear('tanggal', now()->year);
-            })
-            ->groupBy('tanggal')
-            ->orderBy('tanggal')
-            ->get();
+            $pengeluaran = DB::table('pengeluaran')
+                ->selectRaw("DAYNAME(tanggal) as period, SUM(jumlah) as total")
+                ->whereBetween('tanggal', [now()->startOfWeek(), now()->endOfWeek()])
+                ->groupBy('period')
+                ->orderByRaw("FIELD(period, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')")
+                ->get();
+
+        } else if ($filter === 'bulan') {
+            $pendapatan = DB::table('transaksi')
+                ->selectRaw("WEEK(tanggal_waktu, 1) - WEEK(DATE_FORMAT(tanggal_waktu, '%Y-%m-01'), 1) + 1 as week_number, SUM(total_harga) as total")
+                ->whereYear('tanggal_waktu', $year)
+                ->whereMonth('tanggal_waktu', now()->month)
+                ->groupBy('week_number')
+                ->orderBy('week_number')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'period' => "Minggu " . $item->week_number,
+                        'total' => $item->total
+                    ];
+                });
+
+            $pengeluaran = DB::table('pengeluaran')
+                ->selectRaw("WEEK(tanggal, 1) - WEEK(DATE_FORMAT(tanggal, '%Y-%m-01'), 1) + 1 as week_number, SUM(jumlah) as total")
+                ->whereYear('tanggal', $year)
+                ->whereMonth('tanggal', now()->month)
+                ->groupBy('week_number')
+                ->orderBy('week_number')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'period' => "Minggu " . $item->week_number,
+                        'total' => $item->total
+                    ];
+                });
+
+        } else if ($filter === 'tahun') {
+            $pendapatan = DB::table('transaksi')
+                ->selectRaw("MONTH(tanggal_waktu) as month_number, MONTHNAME(tanggal_waktu) as period, SUM(total_harga) as total")
+                ->whereYear('tanggal_waktu', $year)
+                ->groupBy('month_number', 'period')
+                ->orderBy('month_number')
+                ->get();
+
+            $pengeluaran = DB::table('pengeluaran')
+                ->selectRaw("MONTH(tanggal) as month_number, MONTHNAME(tanggal) as period, SUM(jumlah) as total")
+                ->whereYear('tanggal', $year)
+                ->groupBy('month_number', 'period')
+                ->orderBy('month_number')
+                ->get();
+        }
 
         return response()->json([
             'status' => 'success',
             'data' => [
                 'pendapatan' => $pendapatan,
                 'pengeluaran' => $pengeluaran,
+                'filter' => $filter,
+                'year' => $year
             ]
         ]);
     }
@@ -543,50 +577,92 @@ class DashboardController extends Controller
     public function cabangChart(Request $request, $id)
     {
         $filter = $request->query('filter', 'tahun');
+        $year = $request->query('year', now()->year);
 
-        $pendapatan = DB::table('transaksi')
-            ->selectRaw("DATE(tanggal_waktu) as tanggal, SUM(total_harga) as total")
-            ->where('id_cabang', $id)
-            ->when($filter === 'minggu', function ($q) {
-                $q->whereBetween('tanggal_waktu', [
-                    now()->startOfWeek(Carbon::SUNDAY), now()->endOfWeek(Carbon::SATURDAY)
-                ]);
-            })
-            ->when($filter === 'bulan', function ($q) {
-                $q->whereYear('tanggal_waktu', now()->year)
-                    ->whereMonth('tanggal_waktu', now()->month);
-            })
-            ->when($filter === 'tahun', function ($q) {
-                $q->whereYear('tanggal_waktu', now()->year);
-            })
-            ->groupBy('tanggal')
-            ->orderBy('tanggal')
-            ->get();
+        // Validate that the branch exists
+        $cabangExists = DB::table('cabang')->where('id_cabang', $id)->exists();
+        if (!$cabangExists) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Cabang tidak ditemukan'
+            ], 404);
+        }
 
-        $pengeluaran = DB::table('pengeluaran')
-            ->selectRaw("DATE(tanggal) as tanggal, SUM(jumlah) as total")
-            ->where('id_cabang', $id)
-            ->when($filter === 'minggu', function ($q) {
-                $q->whereBetween('tanggal', [
-                    now()->startOfWeek(Carbon::SUNDAY), now()->endOfWeek(Carbon::SATURDAY)
-                ]);
-            })
-            ->when($filter === 'bulan', function ($q) {
-                $q->whereYear('tanggal', now()->year)
-                    ->whereMonth('tanggal', now()->month);
-            })
-            ->when($filter === 'tahun', function ($q) {
-                $q->whereYear('tanggal', now()->year);
-            })
-            ->groupBy('tanggal')
-            ->orderBy('tanggal')
-            ->get();
+        // Pendapatan data
+        if ($filter === 'minggu') {
+            $pendapatan = DB::table('transaksi')
+                ->selectRaw("DAYNAME(tanggal_waktu) as period, SUM(total_harga) as total")
+                ->where('id_cabang', $id)
+                ->whereBetween('tanggal_waktu', [now()->startOfWeek(), now()->endOfWeek()])
+                ->groupBy('period')
+                ->orderByRaw("FIELD(period, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')")
+                ->get();
+
+            $pengeluaran = DB::table('pengeluaran')
+                ->selectRaw("DAYNAME(tanggal) as period, SUM(jumlah) as total")
+                ->where('id_cabang', $id)
+                ->whereBetween('tanggal', [now()->startOfWeek(), now()->endOfWeek()])
+                ->groupBy('period')
+                ->orderByRaw("FIELD(period, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')")
+                ->get();
+
+        } else if ($filter === 'bulan') {
+            $pendapatan = DB::table('transaksi')
+                ->selectRaw("WEEK(tanggal_waktu, 1) - WEEK(DATE_FORMAT(tanggal_waktu, '%Y-%m-01'), 1) + 1 as week_number, SUM(total_harga) as total")
+                ->where('id_cabang', $id)
+                ->whereYear('tanggal_waktu', $year)
+                ->whereMonth('tanggal_waktu', now()->month)
+                ->groupBy('week_number')
+                ->orderBy('week_number')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'period' => "Minggu " . $item->week_number,
+                        'total' => $item->total
+                    ];
+                });
+
+            $pengeluaran = DB::table('pengeluaran')
+                ->selectRaw("WEEK(tanggal, 1) - WEEK(DATE_FORMAT(tanggal, '%Y-%m-01'), 1) + 1 as week_number, SUM(jumlah) as total")
+                ->where('id_cabang', $id)
+                ->whereYear('tanggal', $year)
+                ->whereMonth('tanggal', now()->month)
+                ->groupBy('week_number')
+                ->orderBy('week_number')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'period' => "Minggu " . $item->week_number,
+                        'total' => $item->total
+                    ];
+                });
+
+        } else if ($filter === 'tahun') {
+            $pendapatan = DB::table('transaksi')
+                ->selectRaw("MONTH(tanggal_waktu) as month_number, MONTHNAME(tanggal_waktu) as period, SUM(total_harga) as total")
+                ->where('id_cabang', $id)
+                ->whereYear('tanggal_waktu', $year)
+                ->groupBy('month_number', 'period')
+                ->orderBy('month_number')
+                ->get();
+
+            $pengeluaran = DB::table('pengeluaran')
+                ->selectRaw("MONTH(tanggal) as month_number, MONTHNAME(tanggal) as period, SUM(jumlah) as total")
+                ->where('id_cabang', $id)
+                ->whereYear('tanggal', $year)
+                ->groupBy('month_number', 'period')
+                ->orderBy('month_number')
+                ->get();
+        }
 
         return response()->json([
             'status' => 'success',
             'data' => [
                 'pendapatan' => $pendapatan,
                 'pengeluaran' => $pengeluaran,
+                'cabang_id' => (int)$id,
+                'filter' => $filter,
+                'year' => $year
             ]
         ]);
     }
